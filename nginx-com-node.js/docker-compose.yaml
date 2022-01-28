@@ -1,7 +1,9 @@
 version: '3'
 
 networks:
-  node-network:
+  mysql-network:
+    driver: bridge
+  nginx-network:
     driver: bridge
 
 services:
@@ -9,28 +11,31 @@ services:
     build:
       context: ./nginx
       dockerfile: ./Dockerfile
-    # image: looizao/nginx:latest
     container_name: nginx
-    networks:
-      - node-network
     tty: true
     ports:
       - "8080:80"
     depends_on:
       - app
+    networks:
+      - nginx-network
+
   app:
     build: 
       context: ./node
       dockerfile: ./Dockerfile
-    # image: looizao/node:latest
     container_name: app
-    networks:
-      - node-network
     tty: true
+    command: node index.js
+    entrypoint: dockerize -wait tcp://db:3306 -timeout 60s
     ports:
       - "3000:3000"
     depends_on:
       - db
+    networks:
+      - nginx-network
+      - mysql-network
+
   db:
     image: mysql:5.7
     container_name: db
@@ -43,4 +48,4 @@ services:
       - MYSQL_ROOT_PASSWORD=root
       - MYSQL_DATABASE=nodedb
     networks:
-      - node-network
+      - mysql-network
